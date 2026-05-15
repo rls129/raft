@@ -11,7 +11,7 @@ use std::{
 
 use niri_ipc::{Event, Window, socket::SOCKET_PATH_ENV};
 use tokio::{
-    io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpListener as TokioListener,
     sync::mpsc::{self, error::SendError},
     task::JoinError,
@@ -253,12 +253,13 @@ impl From<tokio::io::Error> for OpenError {
         Self::Spawn
     }
 }
+
 async fn open(path: String) -> Result<(), OpenError> {
     let path = match std::fs::canonicalize(path) {
         Ok(x) => x.display().to_string(),
         Err(e) => {
             send_notif(&format!("{}: Cannot open file: {:?}", line!(), e));
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -268,7 +269,7 @@ async fn open(path: String) -> Result<(), OpenError> {
         Some(m) => m,
         None => {
             send_notif(&format!("{}: failed to determine mime type", line!()));
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -279,7 +280,7 @@ async fn open(path: String) -> Result<(), OpenError> {
                 "{}: failed to determine default application",
                 line!()
             ));
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -289,7 +290,7 @@ async fn open(path: String) -> Result<(), OpenError> {
             send_notif(
                 format!("{}: desktop entry not found: {}", line!(), default_desktop).as_str(),
             );
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -310,7 +311,7 @@ async fn open(path: String) -> Result<(), OpenError> {
 
     if exec_parts.is_empty() {
         send_notif(&format!("{}: invalid exec line, {}", line!(), entry.exec));
-        std::process::exit(1);
+        return Ok(());
     }
 
     let program = &exec_parts[0];
@@ -338,7 +339,7 @@ async fn open(path: String) -> Result<(), OpenError> {
             send_notif(
                 format!("failed to make temp log file. {} {}", x, temp_file_template).as_str(),
             );
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -346,7 +347,7 @@ async fn open(path: String) -> Result<(), OpenError> {
         Ok(x) => x,
         Err(x) => {
             send_notif(format!("failed to read temp log file. {}", x).as_str());
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
@@ -359,7 +360,7 @@ async fn open(path: String) -> Result<(), OpenError> {
             send_notif(
                 format!("failed to open temp log file. {} {}", mk_temp_file_name, x).as_str(),
             );
-            std::process::exit(1);
+            return Ok(());
         }
     };
 
